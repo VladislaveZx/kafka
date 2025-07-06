@@ -1,0 +1,37 @@
+services:
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: redpanda
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=0.0.0.0:9092
+      - --advertise-kafka-addr=redpanda:9092
+      - --overprovisioned
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=redpanda-local
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=redpanda:9092
+    depends_on:
+      - redpanda
+
+  producer:
+    build: ./producer
+    container_name: sensor-producer
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
+    depends_on:
+      - redpanda
