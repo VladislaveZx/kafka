@@ -17,6 +17,43 @@ services:
       - --advertise-kafka-addr=redpanda:9092
       - --overprovisioned
 
+  kafka-cp-kraft:
+    image: confluentinc/cp-kafka:7.6.0
+    hostname: kafka-cp-kraft
+    container_name: kafka-cp-kraft
+    ports:
+      - "9099:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-cp-kraft:9093
+      KAFKA_LISTENERS: PLAINTEXT://kafka-cp-kraft:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://kafka-cp-kraft:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-cp-kraft:29092,EXTERNAL://kafka-cp-kraft:9092
+      KAFKA_LOG_DIRS: /tmp/kafka-logs
+      CLUSTER_ID: "A1B2C3D4E5F6G7H8I9J0KQ"
+
+  kafka-bitnami-kraft:
+    image: bitnami/kafka:3.6
+    hostname: kafka-bitnami-kraft
+    container_name: kafka-bitnami-kraft
+    ports:
+      - "9098:9092"
+      - "29093:29092"
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-bitnami-kraft:9093
+      KAFKA_LISTENERS: PLAINTEXT://kafka-bitnami-kraft:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://kafka-bitnami-kraft:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-bitnami-kraft:29092,EXTERNAL://kafka-bitnami-kraft:9092
+      KAFKA_LOG_DIRS: /tmp/kafka-logs
+
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -25,13 +62,19 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=redpanda-local
       - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=redpanda:9092
+      - KAFKA_CLUSTERS_1_NAME=kafka-cp-kraft
+      - KAFKA_CLUSTERS_1_BOOTSTRAP_SERVERS=kafka-cp-kraft:9092
+      - KAFKA_CLUSTERS_2_NAME=kafka-bitnami-kraft
+      - KAFKA_CLUSTERS_2_BOOTSTRAP_SERVERS=kafka-bitnami-kraft:9092
     depends_on:
       - redpanda
+      - kafka-cp-kraft
+      - kafka-bitnami-kraft
 
   producer:
     build: ./producer
     container_name: sensor-producer
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-bitnami-kraft:9092
     depends_on:
-      - redpanda
+      - kafka-bitnami-kraft
